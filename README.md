@@ -5,17 +5,23 @@ This is a simple command line utility for converting XML based Excel files to us
 
 The basic idea is that xlsx2json reads and Excel file and outputs a JSON expression for each row of the spreadsheet. The headings of the columns become the key names and the value is cell's content.  If you provide a mapping functions written in JavaScript that will be use to process a row into a JSON object.
 
-Like most Unix command line utilities xlsx2json will read from standard input and write to standard output (or standard error if there is a problem). Input is always assumed to be an Excel file's content, output is JSON blobs (one row is one blob).
+Like most Unix command line utilities xlsx2json will write to standard output (or standard error if there is a problem). Input is always assumed to be an Excel file's content, output is JSON blobs (one row is one blob).
 
 ## Basic usage
 
 ```
-    xlsx2json myfile.xlsx
+    xlsx2json -i myfile.xlsx
 ```
 
 This will write a series of JSON blobs to standard out (assuming no error, errors are written to standard error).
 
 If you want to output the JSON blobs as an array of JSON blobs then there is an option --as-array which will result in valid JSON output.
+
+The same writing the JSON objects as an array of objects to myfile.json.
+
+```
+    xlsx2json --as-array -i myfile.xlsx -o myfile.josn
+```
 
 Because excel spreadsheets are typically complete documents the entire sheet(s) is read in before being converted and written out.
 
@@ -26,7 +32,7 @@ You can control the out through providing a JavaScript mapping function.  The ut
 Here's a basic example for writing _myfile.xlsx_ as a series of JSON files mapped with _myobjects.js_
 
 ```
-    xlsx2json -callback myobjects.js myfile.xlsx
+    xlsx2json -js myobjects.js -callback object2row myfile.xlsx
 ```
 
 _myobjects.js_ might look something like this--
@@ -37,7 +43,7 @@ _myobjects.js_ might look something like this--
     }
 
     // Write each row to its own *.json file based on a sluggified name
-    function myobjects(row) {
+    function object2row (row) {
        myobj = {
            Name: row["column_1"],
            Email: row["column_2"]
@@ -46,4 +52,11 @@ _myobjects.js_ might look something like this--
     }
 ```
 
+## Installation
 
+You need to have the xlsx and otto packages available. They are "go get"-able.
+
+```
+    go get github.com/tealeg/xlsx
+    go get github.com/robertkrimen/otto
+```
