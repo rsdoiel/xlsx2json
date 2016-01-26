@@ -2,6 +2,8 @@
  *  A simplistic example of processing an Excel row with JavaScript
  */
 
+var i = 0;
+
 // Use the "Name" column to determine the filename by making it file system name friendly
 function slugify(s) {
     return 'testout/' + encodeURI(s.replace(" ", "_")) + '.json';
@@ -12,6 +14,10 @@ function row2object(row) {
     if (row.Name === undefined) {
         return {"Path":"", "Source": "", "Error": "Missing Name property"}
     }
+    // Add the count
+    i++;
+    row.Count = i;
+
     // Convert "%d" into a numeric value
     a = parseInt(row.Age, 10);
     row.Age = a;

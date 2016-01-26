@@ -71,6 +71,7 @@ func main() {
 		xlFile   *xlsx.File
 		vm       *otto.Otto
 		jsSource []byte
+        jsScript *otto.Script
 	)
 	flag.Parse()
 
@@ -100,7 +101,13 @@ func main() {
 			log.Fatalf("Can't run %s, %s", *jsFilename, err)
 		}
 		jsMap = true
+        jsScript, err = vm.Compile(*jsFilename, jsSource)
+        if err != nil {
+            log.Fatalf("Can't compile %s, %s", *jsFilename, err)
+        }
 		//FIXME: add JS wrapped Golang packages
+        // Define any functions, will evaluate each row with vm.Eval()
+        vm.Run(jsScript)
 	}
 
 	for _, sheet := range xlFile.Sheets {
@@ -133,25 +140,24 @@ func main() {
 					log.Fatalf("Can't render JSON blob, %s", err)
 				}
 				if jsMap == true {
-					//FIXME: once we've defined our callback we actually
-					// need to apply the JS callback via Go ther than run it as a program!
-					js := fmt.Sprintf("%s;\n%s(%s);\n", jsSource, *jsCallback, src)
-					jsValue, err := vm.Run(js)
+					// We're eval the callback from inside a closure to be safer
+					js := fmt.Sprintf("(function(){ return %s(%s);}())", *jsCallback, src)
+                    jsValue, err := vm.Eval(js)
 					if err != nil {
-						log.Fatalf("Can't run %s, %s", *jsFilename, err)
+						log.Fatalf("row: %d, Can't run %s, %s", rowNo, *jsFilename, err)
 					}
 					val, err := jsValue.Export()
 					if err != nil {
-						log.Fatalf("Can't convert JavaScript value %s(%s), %s", *jsCallback, src, err)
+						log.Fatalf("row: %d, Can't convert JavaScript value %s(%s), %s", rowNo, *jsCallback, src, err)
 					}
 					src, err = json.Marshal(val)
 					if err != nil {
-						log.Fatalf("src: %s\njs returned %v\nerror: %s", js, jsValue, err)
+						log.Fatalf("row: %d, src: %s\njs returned %v\nerror: %s", rowNo, js, jsValue, err)
 					}
 					response := new(jsResponse)
 					err = json.Unmarshal(src, &response)
 					if err != nil {
-						log.Fatalf("Do not understand response %s, %s", src, err)
+						log.Fatalf("row: %d, do not understand response %s, %s", rowNo, src, err)
 					}
 					if response.Error != "" {
 						log.Fatalf("row: %d, %s", rowNo, response.Error)
