@@ -30,7 +30,7 @@ var (
 
 type jsResponse struct {
 	Path   string
-	Source []byte
+	Source map[string]interface{}
 	Error  string
 }
 
@@ -154,17 +154,19 @@ func main() {
 						log.Fatalf("Do not understand response %s, %s", src, err)
 					}
 					if response.Error != "" {
-						log.Fatalf("%s", response.Error)
+						log.Fatalf("row: %d, %s", rowNo, response.Error)
+					}
+                    // Now re-package response.Source into a JSON blob
+                    src, err = json.Marshal(response.Source)
+					if err != nil {
+                        log.Fatalf("row: %d, %s", rowNo, err)
 					}
 					if response.Path != "" {
 						d := path.Dir(response.Path)
 						if d != "." {
 							os.MkdirAll(d, 0775)
 						}
-						ioutil.WriteFile(response.Path, response.Source, 0664)
-					}
-					if response.Source != nil {
-						src = response.Source
+						ioutil.WriteFile(response.Path, src, 0664)
 					}
 				}
 				fmt.Printf("%s\n", src)

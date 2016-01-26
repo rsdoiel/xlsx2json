@@ -25,3 +25,4 @@ _testmain.go
 
 # Project specific ignore files
 bin/*
+testout/*
