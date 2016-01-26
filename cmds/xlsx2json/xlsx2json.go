@@ -29,9 +29,9 @@ var (
 )
 
 type jsResponse struct {
-	Path   string
-	Source map[string]interface{}
-	Error  string
+	Path   string `json:"path"`
+	Source map[string]interface{} `json:"source"`
+	Error  string `json:"error"`
 }
 
 func usage() {
@@ -40,7 +40,43 @@ func usage() {
 
  OVERVIEW
 
- Read a .xlsx file and return each row as a JSON object (or array of objects)
+ Read a .xlsx file and return each row as a JSON object (or array of objects).
+ If a JavaScript file and callback name are provided then that will be used to
+ generate the resulting JSON object per row.
+
+ The callback function in JavaScript should return an object that looks like
+
+     {"path": ..., "source": ..., "error": ...}
+
+ The "path" property should contain the desired filename to use for storing
+ the JSON blob. If it is empty the output will only be displayed to standard out.
+
+ The "source" property should be the final version of the object you want to
+ turn into a JSON blob.
+
+ The "error" property is a string and if the string is not empty it will be
+ used as an error message and cause the processing to stop.
+
+ A simple JavaScript Examples:
+
+    // Counter i is used to name the JSON output files.
+    var i = 0;
+
+    // callback is the default name looked for when processing.
+    // the command line option -callback lets you used a different name.
+    function callback(row) {
+        i += 1;
+        if (i > 10) {
+            // Stop if processing more than 10 rows.
+            return {"error": "too many rows..."}
+        }
+        return {
+            "path": "data/" + i + ".json",
+            "source": row,
+            "error": ""
+        }
+    }
+
 
  OPTIONS
 `)
@@ -49,9 +85,9 @@ func usage() {
 
  Examples
 
-    xlsx2json -i myfile.xlsx -as-array
+    xlsx2json -as-array myfile.xlsx
 
-    xlsx2json -i myfile.xlsx -js obj2row.js -callback obj2row
+    xlsx2json -js row2obj.js -callback row2obj myfile.xlsx
 
 `)
 	os.Exit(0)
@@ -63,7 +99,7 @@ func init() {
 	flag.BoolVar(&asArray, "as-array", false, "Write the JSON blobs output as an array")
 	inputFilename = flag.String("i", "", "Read the Excel file from this name")
 	jsFilename = flag.String("js", "", "The name of the JavaScript file containing callback function")
-	jsCallback = flag.String("callback", "", "The name of the JavaScript function to use as a callback")
+	jsCallback = flag.String("callback", "callback", "The name of the JavaScript function to use as a callback")
 }
 
 func main() {
@@ -71,7 +107,7 @@ func main() {
 		xlFile   *xlsx.File
 		vm       *otto.Otto
 		jsSource []byte
-        jsScript *otto.Script
+		jsScript *otto.Script
 	)
 	flag.Parse()
 
@@ -79,10 +115,10 @@ func main() {
 		usage()
 	}
 
-    args := flag.Args()
-    if len(args) > 0 {
-        *inputFilename = args[0]
-    }
+	args := flag.Args()
+	if len(args) > 0 {
+		*inputFilename = args[0]
+	}
 	if *inputFilename == "" {
 		// Read Excel file from standard
 		log.Fatalf("Need to provide an xlsx file for input, -i")
@@ -105,13 +141,13 @@ func main() {
 			log.Fatalf("Can't run %s, %s", *jsFilename, err)
 		}
 		jsMap = true
-        jsScript, err = vm.Compile(*jsFilename, jsSource)
-        if err != nil {
-            log.Fatalf("Can't compile %s, %s", *jsFilename, err)
-        }
+		jsScript, err = vm.Compile(*jsFilename, jsSource)
+		if err != nil {
+			log.Fatalf("Can't compile %s, %s", *jsFilename, err)
+		}
 		//FIXME: add JS wrapped Golang packages
-        // Define any functions, will evaluate each row with vm.Eval()
-        vm.Run(jsScript)
+		// Define any functions, will evaluate each row with vm.Eval()
+		vm.Run(jsScript)
 	}
 
 	for _, sheet := range xlFile.Sheets {
@@ -146,7 +182,7 @@ func main() {
 				if jsMap == true {
 					// We're eval the callback from inside a closure to be safer
 					js := fmt.Sprintf("(function(){ return %s(%s);}())", *jsCallback, src)
-                    jsValue, err := vm.Eval(js)
+					jsValue, err := vm.Eval(js)
 					if err != nil {
 						log.Fatalf("row: %d, Can't run %s, %s", rowNo, *jsFilename, err)
 					}
@@ -166,10 +202,10 @@ func main() {
 					if response.Error != "" {
 						log.Fatalf("row: %d, %s", rowNo, response.Error)
 					}
-                    // Now re-package response.Source into a JSON blob
-                    src, err = json.Marshal(response.Source)
+					// Now re-package response.Source into a JSON blob
+					src, err = json.Marshal(response.Source)
 					if err != nil {
-                        log.Fatalf("row: %d, %s", rowNo, err)
+						log.Fatalf("row: %d, %s", rowNo, err)
 					}
 					if response.Path != "" {
 						d := path.Dir(response.Path)
