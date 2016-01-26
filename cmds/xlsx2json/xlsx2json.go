@@ -79,6 +79,10 @@ func main() {
 		usage()
 	}
 
+    args := flag.Args()
+    if len(args) > 0 {
+        *inputFilename = args[0]
+    }
 	if *inputFilename == "" {
 		// Read Excel file from standard
 		log.Fatalf("Need to provide an xlsx file for input, -i")
