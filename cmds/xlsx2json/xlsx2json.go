@@ -1,6 +1,8 @@
 //
-// Package aspace is a collection of structures and functions
-// for interacting with ArchivesSpace's REST API
+// A command line utility designed to take a XML based Excel file
+// and turn each row into a JSON blob. The JSON blob returned for
+// each row can be processed via a JavaScript callback allowing for
+// flexible translations for spreadsheet to JSON output.
 //
 // @author R. S. Doiel, <rsdoiel@gmail.com>
 // copyright (c) 2016
@@ -29,13 +31,14 @@ var (
 )
 
 type jsResponse struct {
-	Path   string `json:"path"`
+	Path   string                 `json:"path"`
 	Source map[string]interface{} `json:"source"`
-	Error  string `json:"error"`
+	Error  string                 `json:"error"`
 }
 
 func usage() {
 	fmt.Println(`
+
  USAGE: xlsx2json [OPTIONS] EXCEL_FILENAME
 
  OVERVIEW
