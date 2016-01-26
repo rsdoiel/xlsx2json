@@ -44,6 +44,8 @@ func usage() {
  If a JavaScript file and callback name are provided then that will be used to
  generate the resulting JSON object per row.
 
+ JAVASCRIPT
+
  The callback function in JavaScript should return an object that looks like
 
      {"path": ..., "source": ..., "error": ...}
