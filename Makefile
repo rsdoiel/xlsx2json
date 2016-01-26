@@ -11,5 +11,4 @@ clean:
 	if [ -f bin/xlsx2json ]; then rm bin/xlsx2json; fi
 
 install:
-	if [ ! -d $GOBIN ] && [ "$GOBIN" != "" ]; then mkdir -p $GOBIN; fi
 	go install cmds/xlsx2json/xlsx2json.go
