@@ -141,11 +141,54 @@ func main() {
 			log.Fatalf("Can't read JavaScript file %s, %s", fname, err)
 		}
 		vm = otto.New()
-		_, err := vm.Run(jsSource)
-		if err != nil {
-			log.Fatalf("Can't run %s, %s", *jsFilename, err)
-		}
 		jsMap = true
+        vm.Set("Getenv", func(call otto.FunctionCall) otto.Value {
+                envvar := call.Argument(0).String()
+                result, err := vm.ToValue(os.Getenv(envvar))
+                if err != nil {
+                        log.Fatalf("Getenv(%q) error, %s", envvar, err)
+                }
+                return result
+        })
+        vm.Set("HttpGet", func(call otto.FunctionCall) otto.Value {
+                uri := call.Argument(0).String()
+                resp, err := http.Get(uri)
+                if err != nil {
+                        log.Fatalf("Can't connect to %s, %s", uri, err)
+                }
+                defer resp.Body.Close()
+                content, err := ioutil.ReadAll(resp.Body)
+                if err != nil {
+                        log.Fatalf("Can't read response %s, %s", uri, err)
+                }
+                result, err := vm.ToValue(fmt.Sprintf("%s", content))
+                if err != nil {
+                        log.Fatalf("HttpGet(%q) error, %s", uri, err)
+                }
+                return result
+        })
+        vm.Set("HttpPost", func(call otto.FunctionCall) otto.Value {
+                uri := call.Argument(0).String()
+                mimeType := call.Argument(1).String()
+                payload := call.Argument(2).String()
+                buf := strings.NewReader(payload)
+
+                resp, err := http.Post(uri, mimeType, buf)
+                if err != nil {
+                        log.Fatalf("Can't connect to %s, %s", uri, err)
+                }
+                defer resp.Body.Close()
+                content, err := ioutil.ReadAll(resp.Body)
+                if err != nil {
+                        log.Fatalf("Can't read response %s, %s", uri, err)
+                }
+                result, err := vm.ToValue(fmt.Sprintf("%s", content))
+                if err != nil {
+                        log.Fatalf("HttpGet(%q) error, %s", uri, err)
+                }
+                return result
+        })
+
 		jsScript, err = vm.Compile(*jsFilename, jsSource)
 		if err != nil {
 			log.Fatalf("Can't compile %s, %s", *jsFilename, err)
