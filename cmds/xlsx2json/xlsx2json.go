@@ -153,8 +153,35 @@ func main() {
 			return result
 		})
 		vm.Set("HttpGet", func(call otto.FunctionCall) otto.Value {
+			var headers []map[string]string
+
 			uri := call.Argument(0).String()
-			resp, err := http.Get(uri)
+			if len(call.ArgumentList) > 1 {
+				rawObj, err := call.Argument(1).Export()
+				if err != nil {
+					log.Fatalf("Can't reader header arguments, should an array of objects, %s", err)
+				}
+				src, err := json.Marshal(rawObj)
+				if err != nil {
+					log.Fatalf("Can't marshal array of headers, %s", err)
+				}
+				err = json.Unmarshal(src, &headers)
+				if err != nil {
+					log.Fatalf("Cannot convert headers to slice of map[string]string, %s", err)
+				}
+			}
+
+			client := &http.Client{}
+			req, err := http.NewRequest("GET", uri, nil)
+			if err != nil {
+				log.Fatalf("Can't create a GET request for %s, %s", uri, err)
+			}
+			for _, header := range headers {
+				for k, v := range header {
+					req.Header.Set(k, v)
+				}
+			}
+			resp, err := client.Do(req)
 			if err != nil {
 				log.Fatalf("Can't connect to %s, %s", uri, err)
 			}
@@ -170,12 +197,39 @@ func main() {
 			return result
 		})
 		vm.Set("HttpPost", func(call otto.FunctionCall) otto.Value {
+			var headers []map[string]string
+
 			uri := call.Argument(0).String()
 			mimeType := call.Argument(1).String()
 			payload := call.Argument(2).String()
+			if len(call.ArgumentList) > 2 {
+				rawObj, err := call.Argument(3).Export()
+				if err != nil {
+					log.Fatalf("Can't read array of headers, %s", err)
+				}
+				src, err := json.Marshal(rawObj)
+				if err != nil {
+					log.Fatalf("Can't marshal headers, %s", err)
+				}
+				err = json.Unmarshal(src, &headers)
+				if err != nil {
+					log.Fatalf("Cannot convert headers to slice of map[string]string, %s", err)
+				}
+			}
 			buf := strings.NewReader(payload)
 
-			resp, err := http.Post(uri, mimeType, buf)
+			client := &http.Client{}
+			req, err := http.NewRequest("POST", uri, buf)
+			if err != nil {
+				log.Fatalf("Can't create a POST request %s, %s", uri, err)
+			}
+			req.Header.Set("Content-Type", mimeType)
+			for _, header := range headers {
+				for k, v := range header {
+					req.Header.Set(k, v)
+				}
+			}
+			resp, err := client.Do(req)
 			if err != nil {
 				log.Fatalf("Can't connect to %s, %s", uri, err)
 			}
