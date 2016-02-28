@@ -41,6 +41,9 @@ import (
 	"github.com/rsdoiel/otto"
 )
 
+// Version is the library and utilty version number
+const Version = "0.0.1"
+
 type jsResponse struct {
 	Path   string                 `json:"path"`
 	Source map[string]interface{} `json:"source"`

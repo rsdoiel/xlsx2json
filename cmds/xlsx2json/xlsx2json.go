@@ -52,7 +52,7 @@ import (
 )
 
 var (
-	help          bool
+	showhelp      bool
 	sheetNo       int
 	inputFilename *string
 	jsFilename    *string
@@ -124,8 +124,9 @@ func usage() {
 }
 
 func init() {
-	flag.BoolVar(&help, "h", false, "display this help message")
-	flag.BoolVar(&help, "help", false, "display this help message")
+	flag.BoolVar(&showhelp, "h", false, "display this help message")
+	flag.BoolVar(&showhelp, "help", false, "display this help message")
+	flag.BoolVar(&showVersion, "v", false, "display version information")
 	flag.BoolVar(&xlsx2json.UseRepl, "i", false, "Run with an interactive repl")
 	flag.IntVar(&sheetNo, "sheet", 0, "Specify the number of the sheet to process")
 	jsFilename = flag.String("js", "", "The name of the JavaScript file containing callback function")
@@ -138,8 +139,11 @@ func main() {
 	)
 	flag.Parse()
 
-	if help == true {
+	if showhelp == true {
 		usage()
+	}
+	if showVersion == true {
+		fmt.Printf("Version %s\n", xlsx2json.Version)
 	}
 
 	args := flag.Args()
