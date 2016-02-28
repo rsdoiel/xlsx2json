@@ -118,3 +118,12 @@ To create the xlsx2json command utility.
 
 You can also just run "make" as their is a simple makefile for building and
 installation.
+
+## Installation
+
+_xlsx2json_ can be installed with the *go get* command.
+
+```
+    go get github.com/rsdoiel/xlsx2json/...
+```
+
