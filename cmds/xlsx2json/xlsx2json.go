@@ -53,6 +53,7 @@ import (
 
 var (
 	showhelp      bool
+	showVersion   bool
 	sheetNo       int
 	inputFilename *string
 	jsFilename    *string
@@ -109,7 +110,7 @@ func usage() {
  OPTIONS
 `)
 	flag.PrintDefaults()
-	fmt.Println(`
+	fmt.Printf(`
 
  Examples
 
@@ -119,7 +120,8 @@ func usage() {
 
 	xlsx2json -repl myfile.xlsx
 
-`)
+Version %s
+`, xlsx2json.Version)
 	os.Exit(0)
 }
 
@@ -144,6 +146,7 @@ func main() {
 	}
 	if showVersion == true {
 		fmt.Printf("Version %s\n", xlsx2json.Version)
+		os.Exit(0)
 	}
 
 	args := flag.Args()
