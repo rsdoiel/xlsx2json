@@ -35,10 +35,8 @@ import (
 	"fmt"
 
 	// 3rd party packages
+	"github.com/robertkrimen/otto"
 	"github.com/tealeg/xlsx"
-
-	// my packages
-	"github.com/rsdoiel/otto"
 )
 
 // Version is the library and utilty version number

@@ -42,7 +42,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rsdoiel/otto"
+	// 3rd Party packages
+	"github.com/robertkrimen/otto"
 )
 
 // UseRepl can be used as a flag to break from a repl (e.g. by defining a JS quit(); function that flips the boolean value)
