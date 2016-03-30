@@ -82,15 +82,18 @@ func Run(inputFilename string, sheetNo int, jsFilename, jsCallback string) (*ott
 				jsonBlob := map[string]string{}
 				for colNo, cell := range row.Cells {
 					if rowNo == 0 {
-						columnNames = append(columnNames, cell.String())
+						s, _ := cell.String()
+						columnNames = append(columnNames, s)
 					} else {
 						// Build a map and render it out
 						if colNo < len(columnNames) {
-							jsonBlob[columnNames[colNo]] = cell.String()
+							s, _ := cell.String()
+							jsonBlob[columnNames[colNo]] = s
 						} else {
 							k := fmt.Sprintf("column_%d", colNo+1)
 							columnNames = append(columnNames, k)
-							jsonBlob[k] = cell.String()
+							s, _ := cell.String()
+							jsonBlob[k] = s
 						}
 					}
 				}
