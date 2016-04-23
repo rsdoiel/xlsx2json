@@ -1,4 +1,8 @@
 
+[![Go Report Card](http://goreportcard.com/badge/rsdoiel/xlsx2json)](http://goreportcard.com/report/rsdoiel/xlsx2json)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+
 # xlsx2json
 
 This is a simple command line utility for converting XML based Excel files to useful JSON objects.  It uses Geoff Teale's [xlsx](https://github.com/tealeg/xlsx) golang package alone with Robert Krimen's [Otto JavaScript interpretor](https://github.com/robertkrimen/otto).
