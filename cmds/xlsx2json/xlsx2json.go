@@ -109,7 +109,9 @@ func usage() {
 
  OPTIONS
 `)
-	flag.PrintDefaults()
+	flag.VisitAll(func(f *flag.Flag) {
+		fmt.Printf("    -%s  (defaults to %s) %s\n", f.Name, f.DefValue, f.Usage)
+	})
 	fmt.Printf(`
 
  Examples
