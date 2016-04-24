@@ -35,12 +35,14 @@ import (
 	"fmt"
 
 	// 3rd party packages
-	"github.com/robertkrimen/otto"
 	"github.com/tealeg/xlsx"
+
+	// Caltech Library packages
+	"github.com/caltechlibrary/ostdlib"
 )
 
 // Version is the library and utilty version number
-const Version = "0.0.1"
+const Version = "0.0.2"
 
 type jsResponse struct {
 	Path   string                 `json:"path"`
@@ -48,93 +50,90 @@ type jsResponse struct {
 	Error  string                 `json:"error"`
 }
 
+func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet, output []string) ([]string, error) {
+	columnNames := []string{}
+	for rowNo, row := range sheet.Rows {
+		jsonBlob := map[string]string{}
+		for colNo, cell := range row.Cells {
+			if rowNo == 0 {
+				s, _ := cell.String()
+				columnNames = append(columnNames, s)
+			} else {
+				// Build a map and render it out
+				if colNo < len(columnNames) {
+					s, _ := cell.String()
+					jsonBlob[columnNames[colNo]] = s
+				} else {
+					k := fmt.Sprintf("column_%d", colNo+1)
+					columnNames = append(columnNames, k)
+					s, _ := cell.String()
+					jsonBlob[k] = s
+				}
+			}
+		}
+		if rowNo > 0 {
+			src, err := json.Marshal(jsonBlob)
+			if err != nil {
+				return output, fmt.Errorf("Can't render JSON blob, %s", err)
+			}
+			if jsCallback != "" {
+				// We're eval the callback from inside a closure to be safer
+				jsSrc := fmt.Sprintf("(function(){ return %s(%s);}())", jsCallback, src)
+				jsValue, err := js.Eval(jsSrc)
+				if err != nil {
+					return output, fmt.Errorf("row: %d, Can't run %s", rowNo, err)
+				}
+				val, err := jsValue.Export()
+				if err != nil {
+					return output, fmt.Errorf("row: %d, Can't convert JavaScript value %s(%s), %s", rowNo, jsCallback, src, err)
+				}
+				src, err = json.Marshal(val)
+				if err != nil {
+					return output, fmt.Errorf("row: %d, src: %s\njs returned %v\nerror: %s", rowNo, js, jsValue, err)
+				}
+				response := new(jsResponse)
+				err = json.Unmarshal(src, &response)
+				if err != nil {
+					return output, fmt.Errorf("row: %d, do not understand response %s, %s", rowNo, src, err)
+				}
+				if response.Error != "" {
+					return output, fmt.Errorf("row: %d, %s", rowNo, response.Error)
+				}
+				// Now re-package response.Source into a JSON blob
+				src, err = json.Marshal(response.Source)
+				if err != nil {
+					return output, fmt.Errorf("row: %d, %s", rowNo, err)
+				}
+			}
+			output = append(output, string(src))
+		}
+	}
+	return output, nil
+}
+
 // Run runs the xlsx2json transform with optional JavaScript support.
 // Continued processing can be achieved with subsequent calls to
 // the JS VM. It returns the VM, an array of JSON encoded blobs and error.
-func Run(inputFilename string, sheetNo int, jsFilename, jsCallback string) (*otto.Otto, []string, error) {
+func Run(js *ostdlib.JavaScriptVM, inputFilename string, sheetNo int, jsCallback string) ([]string, error) {
 	var (
 		xlFile *xlsx.File
-		vm     *otto.Otto
 		err    error
 		output []string
 	)
 
-	jsMap := false
-	vm, err = NewJavaScriptVM([]string{jsFilename})
-	if err != nil {
-		return nil, output, err
-	}
-	if jsFilename != "" && jsCallback != "" {
-		jsMap = true
-	}
-
 	// Read from the given file path
 	xlFile, err = xlsx.OpenFile(inputFilename)
 	if err != nil {
-		return vm, output, fmt.Errorf("Can't open %s, %s", inputFilename, err)
+		return output, fmt.Errorf("Can't open %s, %s", inputFilename, err)
 	}
 
 	for i, sheet := range xlFile.Sheets {
-		if sheetNo == i {
-			columnNames := []string{}
-
-			for rowNo, row := range sheet.Rows {
-				jsonBlob := map[string]string{}
-				for colNo, cell := range row.Cells {
-					if rowNo == 0 {
-						s, _ := cell.String()
-						columnNames = append(columnNames, s)
-					} else {
-						// Build a map and render it out
-						if colNo < len(columnNames) {
-							s, _ := cell.String()
-							jsonBlob[columnNames[colNo]] = s
-						} else {
-							k := fmt.Sprintf("column_%d", colNo+1)
-							columnNames = append(columnNames, k)
-							s, _ := cell.String()
-							jsonBlob[k] = s
-						}
-					}
-				}
-				if rowNo > 0 {
-					src, err := json.Marshal(jsonBlob)
-					if err != nil {
-						return vm, output, fmt.Errorf("Can't render JSON blob, %s", err)
-					}
-					if jsMap == true {
-						// We're eval the callback from inside a closure to be safer
-						js := fmt.Sprintf("(function(){ return %s(%s);}())", jsCallback, src)
-						jsValue, err := vm.Eval(js)
-						if err != nil {
-							return vm, output, fmt.Errorf("row: %d, Can't run %s, %s", rowNo, jsFilename, err)
-						}
-						val, err := jsValue.Export()
-						if err != nil {
-							return vm, output, fmt.Errorf("row: %d, Can't convert JavaScript value %s(%s), %s", rowNo, jsCallback, src, err)
-						}
-						src, err = json.Marshal(val)
-						if err != nil {
-							return vm, output, fmt.Errorf("row: %d, src: %s\njs returned %v\nerror: %s", rowNo, js, jsValue, err)
-						}
-						response := new(jsResponse)
-						err = json.Unmarshal(src, &response)
-						if err != nil {
-							return vm, output, fmt.Errorf("row: %d, do not understand response %s, %s", rowNo, src, err)
-						}
-						if response.Error != "" {
-							return vm, output, fmt.Errorf("row: %d, %s", rowNo, response.Error)
-						}
-						// Now re-package response.Source into a JSON blob
-						src, err = json.Marshal(response.Source)
-						if err != nil {
-							return vm, output, fmt.Errorf("row: %d, %s", rowNo, err)
-						}
-					}
-					output = append(output, string(src))
-				}
+		if i == sheetNo {
+			output, err := processSheet(js, jsCallback, sheet, output)
+			if err != nil {
+				return output, err
 			}
 		}
 	}
-	return vm, output, nil
+	return output, nil
 }

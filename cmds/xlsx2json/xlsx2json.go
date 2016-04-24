@@ -37,7 +37,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -45,7 +44,10 @@ import (
 	"strings"
 
 	// 3rd Party packages
-	"github.com/chzyer/readline"
+	"github.com/robertkrimen/otto"
+
+	// Caltech Library packages
+	"github.com/caltechlibrary/ostdlib"
 
 	// My packages
 	"github.com/rsdoiel/xlsx2json"
@@ -56,8 +58,8 @@ var (
 	showVersion   bool
 	sheetNo       int
 	inputFilename *string
-	jsFilename    *string
 	jsCallback    *string
+	jsInteractive bool
 )
 
 func usage() {
@@ -118,12 +120,12 @@ func usage() {
 
     xlsx2json myfile.xlsx
 
-    xlsx2json -js row2obj.js -callback row2obj myfile.xlsx
+    xlsx2json -callback row2obj row2obj.js myfile.xlsx
 
-	xlsx2json -repl myfile.xlsx
+	xlsx2json -i myfile.xlsx
 
-Version %s
-`, xlsx2json.Version)
+Version %s repl %s
+`, xlsx2json.Version, ostdlib.Version)
 	os.Exit(0)
 }
 
@@ -131,15 +133,15 @@ func init() {
 	flag.BoolVar(&showhelp, "h", false, "display this help message")
 	flag.BoolVar(&showhelp, "help", false, "display this help message")
 	flag.BoolVar(&showVersion, "v", false, "display version information")
-	flag.BoolVar(&xlsx2json.UseRepl, "i", false, "Run with an interactive repl")
+	flag.BoolVar(&jsInteractive, "i", false, "Run with an interactive repl")
 	flag.IntVar(&sheetNo, "sheet", 0, "Specify the number of the sheet to process")
-	jsFilename = flag.String("js", "", "The name of the JavaScript file containing callback function")
 	jsCallback = flag.String("callback", "callback", "The name of the JavaScript function to use as a callback")
 }
 
 func main() {
 	var (
-		inputFilename string
+		output []string
+		err    error
 	)
 	flag.Parse()
 
@@ -147,66 +149,37 @@ func main() {
 		usage()
 	}
 	if showVersion == true {
-		fmt.Printf("Version %s\n", xlsx2json.Version)
+		fmt.Printf("Version %s repl %s\n", xlsx2json.Version, ostdlib.Version)
 		os.Exit(0)
 	}
 
+	vm := otto.New()
+	js := ostdlib.New(vm)
+	js.AddExtensions()
+
 	args := flag.Args()
-	if len(args) > 0 {
-		inputFilename = args[0]
-	}
-	if inputFilename == "" {
-		// Read Excel file from standard
-		log.Fatalf("Need to provide an xlsx file for input, -i")
-	}
-	vm, output, err := xlsx2json.Run(inputFilename, sheetNo, *jsFilename, *jsCallback)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if xlsx2json.UseRepl == true {
-		//FIXME: merge output as an array
-		vm.Object(fmt.Sprintf(`Spreadsheet = [%s]`, strings.Join(output, ",")))
-		rl, err := readline.New("> ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer rl.Close()
-		for xlsx2json.UseRepl == true {
-			jsSrc, err := rl.Readline()
-			if err != nil { // io.EOF, readline.ErrInterrupt
-				break
-			}
-			if len(strings.Trim(jsSrc, " ")) > 0 {
-				if script, err := vm.Compile("repl", jsSrc); err != nil {
-					fmt.Printf("Compile error, %s\n", err)
-				} else {
-					out, err := vm.Eval(script)
-					switch {
-					case err != nil:
-						fmt.Printf("Runtime error, %s\n", err)
-					default:
-						if xlsx2json.UseRepl == true {
-							fmt.Println(out.String())
-						}
-					}
-				}
+	for _, fname := range args {
+		if strings.HasSuffix(fname, ".js") {
+			if err := js.Run(fname); err != nil {
+				log.Fatalf("%s", err)
 			}
 		}
-		//FIXME: update output to reflect the contents of Spreadsheet from the JS VM
-		if value, err := vm.Get("Spreadsheet"); err == nil {
-			data, err := value.Export()
+		if strings.HasSuffix(fname, ".xlsx") {
+			output, err = xlsx2json.Run(js, fname, sheetNo, *jsCallback)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("%s", err)
 			}
-			src, err := json.Marshal(data)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("%s", src)
-			os.Exit(0)
-		} else {
-			log.Fatal(err)
 		}
 	}
-	fmt.Printf(`[%s]`, strings.Join(output, ","))
+	// Join the preformatted strings into a JSON array
+	src := fmt.Sprintf("[%s]", strings.Join(output, ","))
+	if jsInteractive == true {
+		js.AddHelp()
+		js.AddAutoComplete()
+		js.PrintDefaultWelcome()
+		js.Eval(fmt.Sprintf("Spreadsheet = %s;", src))
+		js.Repl()
+	} else {
+		fmt.Print(src)
+	}
 }
