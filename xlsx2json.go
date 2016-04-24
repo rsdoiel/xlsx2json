@@ -42,7 +42,7 @@ import (
 )
 
 // Version is the library and utilty version number
-const Version = "0.0.2"
+const Version = "0.0.3"
 
 type jsResponse struct {
 	Path   string                 `json:"path"`
