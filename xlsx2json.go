@@ -50,7 +50,8 @@ type jsResponse struct {
 	Error  string                 `json:"error"`
 }
 
-func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet, output []string) ([]string, error) {
+func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet) ([]string, error) {
+	output := []string{}
 	columnNames := []string{}
 	for rowNo, row := range sheet.Rows {
 		jsonBlob := map[string]string{}
@@ -105,6 +106,7 @@ func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet
 					return output, fmt.Errorf("row: %d, %s", rowNo, err)
 				}
 			}
+			fmt.Printf("DEBUG appending src %s\n", src)
 			output = append(output, string(src))
 		}
 	}
@@ -114,11 +116,11 @@ func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet
 // Run runs the xlsx2json transform with optional JavaScript support.
 // Continued processing can be achieved with subsequent calls to
 // the JS VM. It returns the VM, an array of JSON encoded blobs and error.
-func Run(js *ostdlib.JavaScriptVM, inputFilename string, sheetNo int, jsCallback string) ([]string, error) {
+func Run(js *ostdlib.JavaScriptVM, inputFilename string, sheetNo int, jsCallback string) (map[string][]string, error) {
 	var (
 		xlFile *xlsx.File
 		err    error
-		output []string
+		output map[string][]string
 	)
 
 	// Read from the given file path
@@ -128,11 +130,12 @@ func Run(js *ostdlib.JavaScriptVM, inputFilename string, sheetNo int, jsCallback
 	}
 
 	for i, sheet := range xlFile.Sheets {
-		if i == sheetNo {
-			output, err := processSheet(js, jsCallback, sheet, output)
+		if i == sheetNo || sheetNo == -1 {
+			data, err := processSheet(js, jsCallback, sheet, output)
 			if err != nil {
 				return output, err
 			}
+			output[sheet.Name] = data
 		}
 	}
 	return output, nil

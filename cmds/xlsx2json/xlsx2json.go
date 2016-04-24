@@ -57,8 +57,7 @@ var (
 	showhelp      bool
 	showVersion   bool
 	sheetNo       int
-	inputFilename *string
-	jsCallback    *string
+	jsCallback    string
 	jsInteractive bool
 )
 
@@ -130,12 +129,13 @@ Version %s repl %s
 }
 
 func init() {
+	sheetNo = -1
 	flag.BoolVar(&showhelp, "h", false, "display this help message")
 	flag.BoolVar(&showhelp, "help", false, "display this help message")
 	flag.BoolVar(&showVersion, "v", false, "display version information")
 	flag.BoolVar(&jsInteractive, "i", false, "Run with an interactive repl")
-	flag.IntVar(&sheetNo, "sheet", 0, "Specify the number of the sheet to process")
-	jsCallback = flag.String("callback", "callback", "The name of the JavaScript function to use as a callback")
+	flag.IntVar(&sheetNo, "sheet", sheetNo, "Specify the number of the sheet to process (-1 means process all sheets)")
+	flag.StringVar(&jsCallback, "callback", "", "The name of the JavaScript function to use as a callback")
 }
 
 func main() {
@@ -165,7 +165,8 @@ func main() {
 			}
 		}
 		if strings.HasSuffix(fname, ".xlsx") {
-			output, err = xlsx2json.Run(js, fname, sheetNo, *jsCallback)
+			output, err = xlsx2json.Run(js, fname, sheetNo, jsCallback)
+			fmt.Printf("DEBUG output = %+v\n", output)
 			if err != nil {
 				log.Fatal("%s", err)
 			}
