@@ -167,7 +167,7 @@ func main() {
 		if strings.HasSuffix(fname, ".xlsx") {
 			output, err = xlsx2json.Run(js, fname, sheetNo, *jsCallback)
 			if err != nil {
-				log.Fatal("%s", err)
+				log.Fatalf("%s", err)
 			}
 		}
 	}

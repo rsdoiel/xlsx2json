@@ -1,5 +1,5 @@
 //
-// xlsx2json package wraps the github.com/tealag/xlsx package (used under a BSD License) and  a fork of Robert Krimen's Otto
+// Package xlsx2json wraps the github.com/tealag/xlsx package (used under a BSD License) and  a fork of Robert Krimen's Otto
 // Javascript engine (under an MIT License) providing an scriptable xlsx2json exporter, explorer and importer utility.
 //
 // @author R. S. Doiel, <rsdoiel@gmail.com>
@@ -42,7 +42,7 @@ import (
 )
 
 // Version is the library and utilty version number
-const Version = "0.0.2"
+const Version = "0.0.3"
 
 type jsResponse struct {
 	Path   string                 `json:"path"`
