@@ -9,7 +9,13 @@ test:
 	gocyclo -over 14 .
 
 clean:
-	if [ -f bin/xlsx2json ]; then rm bin/xlsx2json; fi
+	if [ -d bin ]; then rm -fR bin; fi
+	if [ -d dist ]; then rm -fR dist; fi
 
 install:
-	go install cmds/xlsx2json/xlsx2json.go
+	GOBIN=$HOME/bin go install cmds/xlsx2json/xlsx2json.go
+
+release:
+	./mk-release.sh
+
+
