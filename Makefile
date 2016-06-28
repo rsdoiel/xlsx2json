@@ -13,7 +13,7 @@ clean:
 	if [ -d dist ]; then rm -fR dist; fi
 
 install:
-	GOBIN=$HOME/bin go install cmds/xlsx2json/xlsx2json.go
+	GOBIN=$(HOME)/bin go install cmds/xlsx2json/xlsx2json.go
 
 release:
 	./mk-release.sh
