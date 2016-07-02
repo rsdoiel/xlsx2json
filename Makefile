@@ -13,3 +13,6 @@ clean:
 
 install:
 	go install cmds/xlsx2json/xlsx2json.go
+
+release:
+	./mk-release.sh
