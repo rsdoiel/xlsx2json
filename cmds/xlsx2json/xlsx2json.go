@@ -82,17 +82,21 @@ used as an error message and cause the processing to stop.
 
 A simple JavaScript Examples:
 
-    /* Counter i is used to name the JSON output files. */
+    /* counter.js - Add column Counter saving i in the JSON output. */
     var i = 0;
 
-    /* callback is the default name looked for when processing.
-       the command line option -callback lets you used a different name. */
+    /* 
+     * callback is the default name looked for when processing.
+     *  the command line option -callback lets you used a different name.
+     */
     function callback(row) {
         i += 1;
         if (i > 10) {
-            // Stop if processing more than 10 rows.
+            /* Stop if processing more than 10 rows. */
             return {"error": "too many rows..."}
         }
+        /* Add a counter column and save the current value of i */
+        row.Counter = i
         return {
             "path": "data/" + i + ".json",
             "source": row,
@@ -105,6 +109,8 @@ A simple JavaScript Examples:
 EXAMPLES
 
     %s myfile.xlsx
+
+	%s counter.js myfile.xlsx
 
     %s -callback row2obj row2obj.js myfile.xlsx
 
@@ -135,7 +141,9 @@ func init() {
 
 	// Application Options
 	flag.BoolVar(&jsInteractive, "i", false, "Run with an interactive repl")
+	flag.BoolVar(&jsInteractive, "interactive", false, "Run with an interactive repl")
 	flag.IntVar(&sheetNo, "sheet", 0, "Specify the number of the sheet to process")
+	flag.IntVar(&sheetNo, "s", 0, "Specify the number of the sheet to process")
 	flag.StringVar(&jsFilename, "j", "", "JavaScript filename")
 	flag.StringVar(&jsFilename, "js", "", "JavaScript filename")
 	flag.StringVar(&jsCallback, "c", "", "The name of the JavaScript function to use as a callback")
@@ -157,7 +165,7 @@ func main() {
 	cfg.UsageText = fmt.Sprintf(usage, appName)
 	cfg.DescriptionText = description
 	cfg.OptionsText = "OPTIONS\n"
-	cfg.ExampleText = fmt.Sprintf(examples, appName, appName, appName)
+	cfg.ExampleText = fmt.Sprintf(examples, appName, appName, appName, appName)
 
 	// handle Standard Options
 	if showhelp == true {
