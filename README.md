@@ -19,14 +19,6 @@ Like most Unix command line utilities xlsx2json will write to standard output (o
 
 This will write a series of JSON blobs to standard out (assuming no error, errors are written to standard error).
 
-If you want to output the JSON blobs as an array of JSON blobs then there is an option --as-array which will result in valid JSON output.
-
-The same writing the JSON objects as an array of objects to myfile.json.
-
-```
-    xlsx2json --as-array myfile.xlsx
-```
-
 Because excel spreadsheets are typically complete documents the entire sheet(s) is read in before being converted and written out.
 
 ## Controlling output
@@ -53,14 +45,14 @@ _row2obj.js_ might look something like this--
      *  + Journeyman (boolean)
      *
      */
-
+    
     var i = 0;
-
+    
     // Use the "Name" column to determine the filename by making it file system name friendly
     function slugify(s) {
         return 'testout/' + encodeURI(s.replace(" ", "_")) + '.json';
     }
-
+    
     // Given a row object write the contents to a JSON blob file.
     // @param row - row comes in as an object with column names for property values
     // @return an object with a path, source and error values. path and error are strings
@@ -73,11 +65,11 @@ _row2obj.js_ might look something like this--
         // Add the count
         i++;
         row.Count = i;
-
+    
         // Convert "%d" into a numeric value
         a = parseInt(row.Age, 10);
         row.Age = a;
-
+        
         // Convert "1" and "0" to true and false
         if (row["Journeyman Status"] !== undefined && row["Journeyman Status"] == "1") {
             row.Journeyman = true;
@@ -95,7 +87,7 @@ _row2obj.js_ might look something like this--
 
 ## Installation
 
-The golang compiler (version 1.5 or better) needs to be installed.
+The golang compiler (version 1.7.3 or better) needs to be installed.
 
 Clone the [source repository](https://github.com/rsdoiel/xlsx2json) on Github.
 Then change to the directory where your cloned repository is.
