@@ -43,7 +43,8 @@ import (
 
 // Version is the library and utilty version number
 const (
-	Version     = "v0.0.4"
+	Version = "v0.0.4"
+
 	LicenseText = `
 %s %s
 
