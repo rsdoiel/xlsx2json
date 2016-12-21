@@ -42,7 +42,36 @@ import (
 )
 
 // Version is the library and utilty version number
-const Version = "0.0.3"
+const (
+	Version     = "v0.0.4-pre"
+	LicenseText = `
+%s %s
+
+Copyright (c) 2016, R. S. Doiel
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+`
+)
 
 type jsResponse struct {
 	Path   string                 `json:"path"`
@@ -50,7 +79,8 @@ type jsResponse struct {
 	Error  string                 `json:"error"`
 }
 
-func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet, output []string) ([]string, error) {
+func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet) ([]string, error) {
+	var output []string
 	columnNames := []string{}
 	for rowNo, row := range sheet.Rows {
 		jsonBlob := map[string]string{}
@@ -115,25 +145,20 @@ func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet
 // Continued processing can be achieved with subsequent calls to
 // the JS VM. It returns the VM, an array of JSON encoded blobs and error.
 func Run(js *ostdlib.JavaScriptVM, inputFilename string, sheetNo int, jsCallback string) ([]string, error) {
-	var (
-		xlFile *xlsx.File
-		err    error
-		output []string
-	)
-
 	// Read from the given file path
-	xlFile, err = xlsx.OpenFile(inputFilename)
+	xlFile, err := xlsx.OpenFile(inputFilename)
 	if err != nil {
-		return output, fmt.Errorf("Can't open %s, %s", inputFilename, err)
+		return nil, fmt.Errorf("Can't open %s, %s", inputFilename, err)
 	}
 
 	for i, sheet := range xlFile.Sheets {
 		if i == sheetNo {
-			output, err := processSheet(js, jsCallback, sheet, output)
+			output, err := processSheet(js, jsCallback, sheet)
 			if err != nil {
-				return output, err
+				return nil, err
 			}
+			return output, nil
 		}
 	}
-	return output, nil
+	return nil, fmt.Errorf("Could not find sheet no %d", sheetNo)
 }

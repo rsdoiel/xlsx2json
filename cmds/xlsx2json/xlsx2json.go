@@ -41,6 +41,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strings"
 
 	// 3rd Party packages
@@ -50,51 +51,42 @@ import (
 	"github.com/caltechlibrary/ostdlib"
 
 	// My packages
+	"github.com/rsdoiel/cli"
 	"github.com/rsdoiel/xlsx2json"
 )
 
 var (
-	showhelp      bool
-	showVersion   bool
-	sheetNo       int
-	inputFilename *string
-	jsCallback    *string
-	jsInteractive bool
-)
+	usage = `USAGE: %s [OPTIONS] EXCEL_FILENAME`
 
-func usage() {
-	fmt.Println(`
+	description = ` 
+SYNOPSIS
 
- USAGE: xlsx2json [OPTIONS] EXCEL_FILENAME
+%s reads an workbook .xlsx file and returns each row as a JSON object (or array of objects).
+If a JavaScript file and callback name are provided then that will be used to
+generate the resulting JSON content.
 
- OVERVIEW
+JAVASCRIPT
 
- Read a .xlsx file and return each row as a JSON object (or array of objects).
- If a JavaScript file and callback name are provided then that will be used to
- generate the resulting JSON object per row.
-
- JAVASCRIPT
-
- The callback function in JavaScript should return an object that looks like
+The callback function in JavaScript should return an object that looks like
 
      {"path": ..., "source": ..., "error": ...}
 
- The "path" property should contain the desired filename to use for storing
- the JSON blob. If it is empty the output will only be displayed to standard out.
+The "path" property should contain the desired filename to use for storing
+the JSON blob. If it is empty the output will only be displayed to standard out.
 
- The "source" property should be the final version of the object you want to
- turn into a JSON blob.
+The "source" property should be the final version of the object you want to
+turn into a JSON blob.
 
- The "error" property is a string and if the string is not empty it will be
- used as an error message and cause the processing to stop.
+The "error" property is a string and if the string is not empty it will be
+used as an error message and cause the processing to stop.
 
- A simple JavaScript Examples:
+A simple JavaScript Examples:
 
-    // Counter i is used to name the JSON output files.
+    /* Counter i is used to name the JSON output files. */
     var i = 0;
 
-    // callback is the default name looked for when processing.
-    // the command line option -callback lets you used a different name.
+    /* callback is the default name looked for when processing.
+       the command line option -callback lets you used a different name. */
     function callback(row) {
         i += 1;
         if (i > 10) {
@@ -107,35 +99,47 @@ func usage() {
             "error": ""
         }
     }
+`
 
+	examples = `
+EXAMPLES
 
- OPTIONS
-`)
-	flag.VisitAll(func(f *flag.Flag) {
-		fmt.Printf("    -%s  (defaults to %s) %s\n", f.Name, f.DefValue, f.Usage)
-	})
-	fmt.Printf(`
+    %s myfile.xlsx
 
- Examples
+    %s -callback row2obj row2obj.js myfile.xlsx
 
-    xlsx2json myfile.xlsx
+	%s -i myfile.xlsx
+`
 
-    xlsx2json -callback row2obj row2obj.js myfile.xlsx
+	// Standard Options
+	showhelp    bool
+	showLicense bool
+	showVersion bool
 
-	xlsx2json -i myfile.xlsx
-
-Version %s repl %s
-`, xlsx2json.Version, ostdlib.Version)
-	os.Exit(0)
-}
+	// Application Options
+	sheetNo       int
+	jsCallback    string
+	jsFilename    string
+	jsInteractive bool
+	xlsxFilename  string
+)
 
 func init() {
-	flag.BoolVar(&showhelp, "h", false, "display this help message")
-	flag.BoolVar(&showhelp, "help", false, "display this help message")
-	flag.BoolVar(&showVersion, "v", false, "display version information")
+	// Standard Options
+	flag.BoolVar(&showhelp, "h", false, "display help")
+	flag.BoolVar(&showhelp, "help", false, "display help")
+	flag.BoolVar(&showLicense, "l", false, "display license")
+	flag.BoolVar(&showVersion, "license", false, "display license")
+	flag.BoolVar(&showVersion, "v", false, "display version")
+	flag.BoolVar(&showVersion, "version", false, "display version")
+
+	// Application Options
 	flag.BoolVar(&jsInteractive, "i", false, "Run with an interactive repl")
 	flag.IntVar(&sheetNo, "sheet", 0, "Specify the number of the sheet to process")
-	jsCallback = flag.String("callback", "callback", "The name of the JavaScript function to use as a callback")
+	flag.StringVar(&jsFilename, "j", "", "JavaScript filename")
+	flag.StringVar(&jsFilename, "js", "", "JavaScript filename")
+	flag.StringVar(&jsCallback, "c", "", "The name of the JavaScript function to use as a callback")
+	flag.StringVar(&jsCallback, "callback", "", "The name of the JavaScript function to use as a callback")
 }
 
 func main() {
@@ -143,34 +147,67 @@ func main() {
 		output []string
 		err    error
 	)
+	appName := path.Base(os.Args[0])
 	flag.Parse()
+	args := flag.Args()
 
+	cfg := cli.New(appName, "XLSX2JSON",
+		fmt.Sprintf(xlsx2json.LicenseText, appName, xlsx2json.Version),
+		xlsx2json.Version)
+	cfg.UsageText = fmt.Sprintf(usage, appName)
+	cfg.DescriptionText = description
+	cfg.OptionsText = "OPTIONS\n"
+	cfg.ExampleText = fmt.Sprintf(examples, appName, appName, appName)
+
+	// handle Standard Options
 	if showhelp == true {
-		usage()
+		fmt.Println(cfg.Usage())
+		os.Exit(0)
+	}
+	if showLicense == true {
+		fmt.Println(cfg.License())
+		os.Exit(0)
 	}
 	if showVersion == true {
-		fmt.Printf("Version %s repl %s\n", xlsx2json.Version, ostdlib.Version)
+		fmt.Println(cfg.Version())
 		os.Exit(0)
+	}
+
+	for _, fname := range args {
+		if strings.HasSuffix(fname, ".js") {
+			jsFilename = fname
+		}
+		if strings.HasSuffix(fname, ".xlsx") {
+			xlsxFilename = fname
+		}
+	}
+
+	if len(xlsxFilename) == 0 && jsInteractive == false {
+		fmt.Fprintf(os.Stderr, "Missing xlsx filename, see %s -help\n", appName)
+		os.Exit(1)
 	}
 
 	vm := otto.New()
 	js := ostdlib.New(vm)
 	js.AddExtensions()
 
-	args := flag.Args()
-	for _, fname := range args {
-		if strings.HasSuffix(fname, ".js") {
-			if err := js.Run(fname); err != nil {
-				log.Fatalf("%s", err)
-			}
+	if jsFilename != "" {
+		// Check to see if we need to use the default callback
+		if len(jsCallback) == 0 {
+			jsCallback = "callback"
 		}
-		if strings.HasSuffix(fname, ".xlsx") {
-			output, err = xlsx2json.Run(js, fname, sheetNo, *jsCallback)
-			if err != nil {
-				log.Fatalf("%s", err)
-			}
+		if err := js.Run(jsFilename); err != nil {
+			log.Fatalf("%s", err)
 		}
 	}
+
+	if len(xlsxFilename) > 0 {
+		output, err = xlsx2json.Run(js, xlsxFilename, sheetNo, jsCallback)
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+	}
+
 	// Join the preformatted strings into a JSON array
 	src := fmt.Sprintf("[%s]", strings.Join(output, ","))
 	if jsInteractive == true {
