@@ -1,6 +1,5 @@
 
-[![Go Report Card](http://goreportcard.com/badge/rsdoiel/xlsx2json)](http://goreportcard.com/report/rsdoiel/xlsx2json)
-
+    this repository has been depreciated and merged with https://github.com/rsdoiel/jsontools
 
 # xlsx2json
 
