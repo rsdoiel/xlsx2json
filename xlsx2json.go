@@ -87,17 +87,17 @@ func processSheet(js *ostdlib.JavaScriptVM, jsCallback string, sheet *xlsx.Sheet
 		jsonBlob := map[string]string{}
 		for colNo, cell := range row.Cells {
 			if rowNo == 0 {
-				s, _ := cell.String()
+				s := cell.String()
 				columnNames = append(columnNames, s)
 			} else {
 				// Build a map and render it out
 				if colNo < len(columnNames) {
-					s, _ := cell.String()
+					s := cell.String()
 					jsonBlob[columnNames[colNo]] = s
 				} else {
 					k := fmt.Sprintf("column_%d", colNo+1)
 					columnNames = append(columnNames, k)
-					s, _ := cell.String()
+					s := cell.String()
 					jsonBlob[k] = s
 				}
 			}

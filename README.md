@@ -1,5 +1,5 @@
 
-    this repository has been depreciated and merged with https://github.com/rsdoiel/jsontools
+    this repository has been depreciated and merged with https://github.com/caltechlibrary/datatools
 
 # xlsx2json
 

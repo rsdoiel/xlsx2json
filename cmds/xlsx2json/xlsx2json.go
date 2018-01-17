@@ -51,7 +51,7 @@ import (
 	"github.com/caltechlibrary/ostdlib"
 
 	// My packages
-	"github.com/rsdoiel/cli"
+	"github.com/caltechlibrary/cli"
 	"github.com/rsdoiel/xlsx2json"
 )
 
@@ -159,12 +159,12 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	cfg := cli.New(appName, "XLSX2JSON",
+	cfg := cli.New(appName,
 		fmt.Sprintf(xlsx2json.LicenseText, appName, xlsx2json.Version),
 		xlsx2json.Version)
 	cfg.UsageText = fmt.Sprintf(usage, appName)
 	cfg.DescriptionText = description
-	cfg.OptionsText = "OPTIONS\n"
+	//cfg.OptionsText = "OPTIONS\n"
 	cfg.ExampleText = fmt.Sprintf(examples, appName, appName, appName, appName)
 
 	// handle Standard Options
